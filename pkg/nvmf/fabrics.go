@@ -36,11 +36,24 @@ type Connector struct {
 	TargetPort    string
 	Transport     string
 	HostNqn       string
+	HostId        string
 	RetryCount    int32
 	CheckInterval int32
 }
 
-func getNvmfConnector(nvmfInfo *nvmfDiskInfo, hostnqn string) *Connector {
+func getNvmfConnector(nvmfInfo *nvmfDiskInfo) *Connector {
+	hostnqnData, err := os.ReadFile("/etc/nvme/hostnqn")
+	hostnqn := strings.TrimSpace(string(hostnqnData))
+	if err != nil {
+		hostnqn = ""
+	}
+
+	hostidData, err := os.ReadFile("/etc/nvme/hostid")
+	hostid := strings.TrimSpace(string(hostidData))
+	if err != nil {
+		hostid = ""
+	}
+
 	return &Connector{
 		VolumeID:   nvmfInfo.VolName,
 		DeviceUUID: nvmfInfo.DeviceUUID,
@@ -49,6 +62,7 @@ func getNvmfConnector(nvmfInfo *nvmfDiskInfo, hostnqn string) *Connector {
 		TargetPort: nvmfInfo.Port,
 		Transport:  nvmfInfo.Transport,
 		HostNqn:    hostnqn,
+		HostId:     hostid,
 	}
 }
 
@@ -244,7 +258,17 @@ func (c *Connector) Connect() (string, error) {
 		return "", fmt.Errorf("csi transport only support tcp/rdma ")
 	}
 
-	baseString := fmt.Sprintf("nqn=%s,transport=%s,traddr=%s,trsvcid=%s,hostnqn=%s", c.TargetNqn, c.Transport, c.TargetAddr, c.TargetPort, c.HostNqn)
+	var builder strings.Builder
+	builder.WriteString(fmt.Sprintf("nqn=%s,transport=%s,traddr=%s,trsvcid=%s", c.TargetNqn, c.Transport, c.TargetAddr, c.TargetPort))
+
+	if c.HostNqn != "" {
+		builder.WriteString(fmt.Sprintf(",hostnqn=%s", c.HostNqn))
+	}
+	if c.HostId != "" {
+		builder.WriteString(fmt.Sprintf(",hostid=%s", c.HostId))
+	}
+	baseString := builder.String()
+
 	devicePath := strings.Join([]string{"/dev/disk/by-id/nvme-uuid", c.DeviceUUID}, ".")
 
 	// connect to nvmf disk
