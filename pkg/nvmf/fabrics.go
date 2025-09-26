@@ -30,7 +30,7 @@ import (
 
 type Connector struct {
 	VolumeID      string
-	DeviceUUID    string
+	DeviceID      string
 	TargetNqn     string
 	TargetAddr    string
 	TargetPort    string
@@ -64,7 +64,7 @@ func getNvmfConnector(nvmfInfo *nvmfDiskInfo) *Connector {
 
 	return &Connector{
 		VolumeID:   nvmfInfo.VolName,
-		DeviceUUID: nvmfInfo.DeviceUUID,
+		DeviceID:   nvmfInfo.DeviceID,
 		TargetNqn:  nvmfInfo.Nqn,
 		TargetAddr: nvmfInfo.Addr,
 		TargetPort: nvmfInfo.Port,
@@ -276,7 +276,7 @@ func (c *Connector) Connect() (string, error) {
 	}
 	baseString := builder.String()
 
-	devicePath := strings.Join([]string{"/dev/disk/by-id/nvme-uuid", c.DeviceUUID}, ".")
+	devicePath := strings.Join([]string{"/dev/disk/by-id/nvme-", c.DeviceID}, "")
 
 	// connect to nvmf disk
 	err := _connect(baseString)
