@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"k8s.io/klog/v2"
@@ -32,8 +33,10 @@ type nvmfDiskInfo struct {
 	Nqn        string
 	Addr       string
 	Port       string
-	DeviceUUID string
+	DeviceID   string
 	Transport  string
+	HostId     string
+	HostNqn    string
 }
 
 func getNVMfDiskInfo(req *csi.NodePublishVolumeRequest) (*nvmfDiskInfo, error) {
@@ -43,10 +46,15 @@ func getNVMfDiskInfo(req *csi.NodePublishVolumeRequest) (*nvmfDiskInfo, error) {
 	targetTrAddr := volOpts["targetTrAddr"]
 	targetTrPort := volOpts["targetTrPort"]
 	targetTrType := volOpts["targetTrType"]
-	deviceUUID := volOpts["deviceUUID"]
+	devHostNqn := volOpts["hostNqn"]
+	devHostId := volOpts["hostId"]
+	deviceID := volOpts["deviceID"]
+	if (volOpts["deviceUUID"] != "") {
+	        deviceID = strings.Join([]string{"uuid", volOpts["deviceUUID"]}, ".")
+	}
 	nqn := volOpts["nqn"]
 
-	if targetTrAddr == "" || nqn == "" || targetTrPort == "" || targetTrType == "" || deviceUUID == "" {
+	if targetTrAddr == "" || nqn == "" || targetTrPort == "" || targetTrType == "" || deviceID == "" {
 		return nil, fmt.Errorf("some nvme target info is missing, volID: %s ", volName)
 	}
 
@@ -55,8 +63,10 @@ func getNVMfDiskInfo(req *csi.NodePublishVolumeRequest) (*nvmfDiskInfo, error) {
 		Addr:       targetTrAddr,
 		Port:       targetTrPort,
 		Nqn:        nqn,
-		DeviceUUID: deviceUUID,
+		DeviceID:   deviceID,
 		Transport:  targetTrType,
+		HostNqn:    devHostNqn,
+		HostId:     devHostId,
 	}, nil
 }
 
